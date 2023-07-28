@@ -4,177 +4,128 @@
 #include <SDL_mixer.h>
 #include <iostream>
 
-// Screen dimensions
-const int SCREEN_WIDTH = 800;
-const int SCREEN_HEIGHT = 600;
-
-// Load an image as an SDL_Texture
-SDL_Texture* loadTexture(SDL_Renderer* renderer, const std::string& path) {
-    SDL_Surface* surface = IMG_Load(path.c_str());
-    if (!surface) {
-        std::cerr << "Error loading image: " << IMG_GetError() << std::endl;
-        return nullptr;
-    }
-
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_FreeSurface(surface);
-
-    return texture;
-}
-
-// Load a font and render text as an SDL_Texture
-SDL_Texture* loadFont(SDL_Renderer* renderer, const std::string& fontPath, int fontSize, const std::string& text, SDL_Color textColor) {
-    TTF_Font* font = TTF_OpenFont(fontPath.c_str(), fontSize);
-    if (!font) {
-        std::cerr << "Error loading font: " << TTF_GetError() << std::endl;
-        return nullptr;
-    }
-
-    SDL_Surface* textSurface = TTF_RenderText_Blended(font, text.c_str(), textColor);
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, textSurface);
-    SDL_FreeSurface(textSurface);
-    TTF_CloseFont(font);
-
-    return texture;
-}
-
-int main(int argc, char* args[]) {
-    // Initialize SDL or exit early if SDL is not initialized.
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
-        std::cerr << "SDL initialization failed: " << SDL_GetError() << std::endl;
+int main(int argc, char** argv) {
+    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+        std::cerr << "SDL_Init Error: " << SDL_GetError() << std::endl;
         return 1;
     }
 
-    // Initialize SDL_ttf
-    if (TTF_Init() != 0) {
-        std::cerr << "SDL_ttf initialization failed: " << TTF_GetError() << std::endl;
-        // App will continue if continue the program if font initialization fails, but font rendering won't work
+    if (IMG_Init(IMG_INIT_JPG) != IMG_INIT_JPG) {
+        std::cerr << "IMG_Init Error: " << IMG_GetError() << std::endl;
+        return 1;
     }
 
-    // Initialize SDL_mixer
-    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096) == -1) {
-        std::cerr << "SDL_mixer initialization failed: " << Mix_GetError() << std::endl;
-        // App will continue if audio initialization fails, but music won't play
+    if (TTF_Init() == -1) {
+        std::cerr << "TTF_Init: " << TTF_GetError() << std::endl;
+        return 1;
     }
 
-    // Create a window
-    SDL_Window* window = SDL_CreateWindow("SDL Project", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
-    if (!window) {
-        std::cerr << "Window creation failed: " << SDL_GetError() << std::endl;
-        // App will continue if window creation fails, but the window won't show up
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+        std::cerr << "Mix_OpenAudio Error: " << Mix_GetError() << std::endl;
+        return 1;
     }
 
-    // Create a renderer
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    if (!renderer) {
-        std::cerr << "Renderer creation failed: " << SDL_GetError() << std::endl;
-        // App will continue if renderer creation fails, but graphics won't be displayed
+    SDL_Window* m_window = SDL_CreateWindow("Hello World!", 100, 100, 800, 600, SDL_WINDOW_SHOWN);
+    if (m_window == nullptr) {
+        std::cerr << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
+        SDL_Quit();
+        return 1;
     }
 
-    // Load background textures
-    bool texturesLoaded = true;
-    SDL_Texture* upperTexture = loadTexture(renderer, "assets/images/upper_background.jpg");
-    SDL_Texture* lowerTexture = loadTexture(renderer, "assets/images/lower_background.jpg");
-    if (!upperTexture || !lowerTexture) {
-        std::cerr << "Failed to load background textures." << std::endl;
-        texturesLoaded = false;
-        // App will continue if background texture loading fails, but the textures won't be displayed
+    SDL_Renderer* m_renderer = SDL_CreateRenderer(m_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (m_renderer == nullptr) {
+        SDL_DestroyWindow(m_window);
+        std::cerr << "SDL_CreateRenderer Error: " << SDL_GetError() << std::endl;
+        SDL_Quit();
+        return 1;
     }
 
-    // Load font and render "SDL Template" text
-    bool fontLoaded = true;
-    TTF_Font* font = TTF_OpenFont("assets/fonts/RobotoRegular.ttf", 36);
-    if (!font) {
-        std::cerr << "Error loading font: " << TTF_GetError() << std::endl;
-        fontLoaded = false;
-        // App will continue if the program if font loading fails, but the text won't be displayed
+    SDL_Texture* background = IMG_LoadTexture(m_renderer, "assets/images/upper_background.jpg");
+    SDL_Rect destRect;
+
+    if (background != nullptr) {
+        // Get the width and height of the background texture
+        int bgWidth, bgHeight;
+        SDL_QueryTexture(background, nullptr, nullptr, &bgWidth, &bgHeight);
+
+        // Calculate the scale factor to fit the window, preserving aspect ratio
+        float scaleX = 800 / (float)bgWidth;
+        float scaleY = 600 / (float)bgHeight;
+        float scale = std::min(scaleX, scaleY);
+
+        // Calculate the destination rectangle
+        destRect.w = (int)(bgWidth * scale);
+        destRect.h = (int)(bgHeight * scale);
+        destRect.x = (800 - destRect.w) / 2; // Center the image horizontally
+        destRect.y = (600 - destRect.h) / 2; // Center the image vertically
+    }
+    else
+    {
+        std::cerr << "IMG_LoadTexture Error: " << IMG_GetError() << std::endl;
     }
 
-    SDL_Color textColor = { 255, 255, 255, 255 }; // White color for text
-    SDL_Texture* textTexture = loadFont(renderer, "assets/fonts/RobotoRegular.ttf", 36, "SDL Template", textColor);
-    if (!textTexture) {
-        std::cerr << "Failed to render text." << std::endl;
-        fontLoaded = false;
-        // App will continue if the program if text rendering fails, but the text won't be displayed
+
+    TTF_Font* font = TTF_OpenFont("assets/fonts/RobotoThin.ttf", 64);
+    if (font == nullptr) {
+        std::cerr << "TTF_OpenFont Error: " << TTF_GetError() << std::endl;
+        return 1;
     }
 
-    // Set the blend mode to enable transparency
-    SDL_SetTextureBlendMode(upperTexture, SDL_BLENDMODE_BLEND);
-    SDL_SetTextureBlendMode(lowerTexture, SDL_BLENDMODE_BLEND);
+    SDL_Color textColor = { 255, 255, 255 }; // White color
+    SDL_Surface* surfaceMessage = TTF_RenderText_Blended(font, "SDL Template", textColor);
+    SDL_Texture* message = SDL_CreateTextureFromSurface(m_renderer, surfaceMessage);
 
-    // Clear the screen with black color
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderClear(renderer);
+    SDL_Rect message_rect; //create a rect
+    message_rect.x = 350;  //controls the rect's x coordinate 
+    message_rect.y = 280; // controls the rect's y coordinate
+    message_rect.w = surfaceMessage->w; // controls the width of the rect
+    message_rect.h = surfaceMessage->h; // controls the height of the rect
 
-    // Get the dimensions of the text texture
-    int textWidth, textHeight;
-    SDL_QueryTexture(textTexture, nullptr, nullptr, &textWidth, &textHeight);
-
-    // Calculate the position to center the text
-    int textX = (SCREEN_WIDTH - textWidth) / 2;
-    int textY = (SCREEN_HEIGHT - textHeight) / 2;
-
-    // Fade in effect (increase alpha from 0 to 255)
-    if (texturesLoaded && fontLoaded) {
-        for (int alpha = 0; alpha <= 255; alpha += 5) {
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-            SDL_RenderClear(renderer);
-
-            // Render upper and lower background textures
-            SDL_SetTextureAlphaMod(upperTexture, alpha);
-            SDL_SetTextureAlphaMod(lowerTexture, alpha);
-            SDL_RenderCopy(renderer, upperTexture, nullptr, nullptr);
-            SDL_RenderCopy(renderer, lowerTexture, nullptr, nullptr);
-
-            // Render the text in the middle of the window
-            SDL_SetTextureAlphaMod(textTexture, alpha);
-            SDL_Rect textRect = { textX, textY, textWidth, textHeight };
-            SDL_RenderCopy(renderer, textTexture, nullptr, &textRect);
-
-             SDL_RenderPresent(renderer);
-            SDL_Delay(50); // Delay to control fade speed (adjust as needed)
-        }
+    Mix_Music* music = Mix_LoadMUS("assets/audio/PunchDeckICantStop.ogg");
+    if (music == nullptr) {
+        std::cerr << "Mix_LoadMUS Error: " << Mix_GetError() << std::endl;
+        // If there is an error loading the music, we can continue without music.
     }
 
-    // Load music
-    Mix_Music* music = Mix_LoadMUS("music.mp3");
-    if (!music) {
-        std::cerr << "Failed to load music: " << Mix_GetError() << std::endl;
-        // App will continue if the program if music loading fails, but music won't play
-    } else {
-        // Play music if loaded successfully
-        Mix_PlayMusic(music, -1); // The second parameter (-1) means loop indefinitely
+    if (music != nullptr && Mix_PlayMusic(music, -1) == -1) {
+        std::cerr << "Mix_PlayMusic Error: " << Mix_GetError() << std::endl;
     }
 
-    // Event loop to keep the window open until the user clicks the top-right X button
+    bool running = true;
     SDL_Event event;
-    bool quit = false;
-    while (!quit) {
+
+    while (running) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
-                quit = true;
+                running = false;
             }
         }
+
+        if (background != nullptr) {
+            SDL_RenderCopy(m_renderer, background, nullptr, &destRect); // Render the background texture
+        } else {
+            SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, 255);  // Set the drawing color to black
+            SDL_RenderClear(m_renderer);  // Clear the entire screen with the drawing color.
+        }
+        SDL_RenderCopy(m_renderer, message, nullptr, &message_rect); // render the message texture
+        SDL_RenderPresent(m_renderer);  // Make the changes appear on screen
+        SDL_Delay(1);  // Delay to reduce CPU usage
     }
 
-    // Release resources
-    if (music) {
-        Mix_FreeMusic(music);
+    SDL_FreeSurface(surfaceMessage);
+    SDL_DestroyTexture(message);
+    if (background != nullptr) {
+        SDL_DestroyTexture(background);
     }
     TTF_CloseFont(font);
-    SDL_DestroyTexture(textTexture);
-    SDL_DestroyTexture(upperTexture);
-    SDL_DestroyTexture(lowerTexture);
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-
-    // Quit SDL_mixer
+    if (music != nullptr) {
+        Mix_FreeMusic(music);
+    }
     Mix_CloseAudio();
 
-    // Quit SDL_ttf
+    SDL_DestroyRenderer(m_renderer);
+    SDL_DestroyWindow(m_window);
     TTF_Quit();
-
-    // Quit SDL
     SDL_Quit();
 
     return 0;
