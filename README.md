@@ -1,0 +1,2 @@
+# cpp-sdl-template
+SDL
