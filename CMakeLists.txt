@@ -1,17 +1,22 @@
 cmake_minimum_required(VERSION 3.21)
 
+# Configuration bug on Apple, that requires this check before 'project' command.
+if (APPLE AND "${CMAKE_GENERATOR}" STREQUAL "Xcode")
+  set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)")
+endif ()
+
 # Change the first parameter (name of your .exe) and last parameter (in DESCRIPTION "" quotes) to whatever.
 project(SDL_Game
         VERSION 0.0.1
         LANGUAGES CXX
-        DESCRIPTION "Hero Quest community version")
+        DESCRIPTION "Windows SDL / C++ Template")
 
 # Setting C++ Standards and disabling extensions for all targets
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Set a default build type if none was specified
+# Set a debug condiguration if none was specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "Setting build type to 'Debug' as none was specified.")
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
@@ -64,7 +69,7 @@ set(clang_warnings
 set(gcc_warnings
   ${clang_warnings}
   -Wmisleading-indentation # warn if indentation implies blocks where blocks
-  # @todo: Somehow those make problems in some versions of Clang in Windows. So I deactivate them for now.
+  #  Clang in Windows issues (must not use for now):
   # -Wduplicated-branches # warn if if / else branches have duplicated code
   # -Wduplicated-cond # warn if if / else chain has duplicated conditions
   # -Wlogical-op # warn about logical operations being used where bitwise were
@@ -127,12 +132,23 @@ source_group("Sources/Public"   FILES  ${game_header_files})
 source_group("Configuration"    FILES  ${game_config_files})
 source_group("Resources"        FILES  ${game_resource_files})
 
-add_executable(${PROJECT_NAME}
-      ${entry_point}
-      ${game_source_files}
-      ${game_header_files}
-      ${game_resource_files}
-)
+if(WIN32)
+  add_executable(${PROJECT_NAME} WIN32
+        ${entry_point}
+        ${game_source_files}
+        ${game_header_files}
+        ${game_resource_files}
+  )
+endif()
+
+if(APPLE)
+  add_executable(${PROJECT_NAME} MACOSX_BUNDLE
+        ${entry_point}
+        ${game_source_files}
+        ${game_header_files}
+        ${game_resource_files}
+  )
+endif()
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${game_header_dir})
 
