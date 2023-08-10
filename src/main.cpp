@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    SDL_Window* m_window = SDL_CreateWindow("Hello World!", 100, 100, 800, 600, SDL_WINDOW_SHOWN);
+    SDL_Window* m_window = SDL_CreateWindow("SDL Template", 100, 100, 800, 600, SDL_WINDOW_SHOWN);
     if (m_window == nullptr) {
         std::cerr << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
         SDL_Quit();
