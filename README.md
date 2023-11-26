@@ -7,3 +7,5 @@
 - Visual Studio Code with CMake extension or cmake cli knowledge.
 ### Licence:
 - Whatever SDL, it's dependencies and all the accompanying libraries have.
+### Attribution on use:
+- Not required at all, but highly appreciated if everything works fine.
