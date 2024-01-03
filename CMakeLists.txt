@@ -172,6 +172,9 @@ target_compile_options(${PROJECT_NAME} PRIVATE ${PROJECT_WARNINGS})
 # Set LearnSDL.exe as the Startup project on Visual Studio
 if(MSVC)
   set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
+    # Tells Visual Studio to set the working directory to the directory where the target's executable will be outputted.
+    # That should be the same location where the assets will be copied (see custom commands at the end).
+    set_target_properties(${PROJECT_NAME} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:${PROJECT_NAME}>")
 endif()
 
 # Copy assets/ with its contents, to CMAKE_RUNTIME_OUTPUT_DIRECTORY
